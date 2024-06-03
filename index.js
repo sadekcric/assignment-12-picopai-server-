@@ -3,7 +3,7 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // MIDDLEWARE
 app.use(cors());
@@ -25,6 +25,7 @@ async function run() {
     const userCollection = client.db("picopai").collection("users");
     const TaskCollection = client.db("picopai").collection("allTasks");
 
+    // For User Collection APi
     app.post("/users", async (req, res) => {
       const user = req.body;
       const filter = { email: user.email };
@@ -47,6 +48,7 @@ async function run() {
       res.send(result);
     });
 
+    // for Task Collection Api
     app.post("/add-task", async (req, res) => {
       const tasks = req.body;
       const query = { email: tasks.email };
@@ -59,6 +61,18 @@ async function run() {
 
       const result = await TaskCollection.insertOne(tasks);
 
+      res.send(result);
+    });
+
+    app.get("/tasks", async (req, res) => {
+      const result = await TaskCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/tasks/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await TaskCollection.findOne(query);
       res.send(result);
     });
 
