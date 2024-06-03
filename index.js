@@ -24,6 +24,7 @@ async function run() {
   try {
     const userCollection = client.db("picopai").collection("users");
     const TaskCollection = client.db("picopai").collection("allTasks");
+    const submitCollection = client.db("picopai").collection("allSubmits");
 
     // For User Collection APi
     app.post("/users", async (req, res) => {
@@ -73,6 +74,13 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await TaskCollection.findOne(query);
+      res.send(result);
+    });
+
+    // for Submit Collection API
+    app.post("/submits", async (req, res) => {
+      const data = req.body;
+      const result = await submitCollection.insertOne(data);
       res.send(result);
     });
 
