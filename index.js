@@ -89,6 +89,7 @@ async function run() {
       const id = req.params.id;
       const tasks = req.body;
       const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
       const update = {
         $set: {
           details: tasks.details,
@@ -97,6 +98,7 @@ async function run() {
         },
       };
       const result = await TaskCollection.updateOne(query, update);
+      res.send(result);
     });
 
     app.delete("/tasks/:id", async (req, res) => {
