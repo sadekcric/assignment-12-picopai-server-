@@ -78,6 +78,45 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/get_task/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await TaskCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.put("/tasks/:id", async (req, res) => {
+      const id = req.params.id;
+      const tasks = req.body;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          details: tasks.details,
+          title: tasks.title,
+          submissionInfo: tasks.submissionInfo,
+        },
+      };
+      const result = await TaskCollection.updateOne(query, update);
+    });
+
+    app.delete("/tasks/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+
+      const task = await TaskCollection.findOne(query);
+
+      const { email, payable, quantity } = task;
+      const payableAmount = parseInt(payable);
+      const remainQuantity = parseInt(quantity);
+
+      const remainCoin = payableAmount * remainQuantity;
+
+      await userCollection.updateOne({ email: email }, { $inc: { coin: remainCoin } });
+
+      const result = await TaskCollection.deleteOne(query);
+      res.send(result);
+    });
+
     // for Submit Collection API
     app.post("/submits", async (req, res) => {
       const data = req.body;
