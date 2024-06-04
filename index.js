@@ -25,6 +25,7 @@ async function run() {
     const userCollection = client.db("picopai").collection("users");
     const TaskCollection = client.db("picopai").collection("allTasks");
     const submitCollection = client.db("picopai").collection("allSubmits");
+    const withdrawalCollection = client.db("picopai").collection("allWithdrawals");
 
     // For User Collection APi
     app.post("/users", async (req, res) => {
@@ -84,24 +85,42 @@ async function run() {
       res.send(result);
     });
 
-    // app.get("/users/coin/:email", async (req, res) => {
-    //   const user = req.params.email;
-    //   const filter = { email: user };
-    //   const options = {
-    //     projection: {
-    //       _id: 0,
-    //       name: 0,
-    //       email: 1,
-    //       password: 0,
-    //       role: 1,
-    //       coin: 0,
-    //       photo: 0,
-    //     },
-    //   };
+    app.get("/submits/:worker_email", async (req, res) => {
+      const email = req.params.worker_email;
+      const query = { worker_email: email };
+      const result = await submitCollection.find(query).toArray();
 
-    //   const result = await userCollection.findOne(filter, options);
-    //   res.send(result);
-    // });
+      res.send(result);
+    });
+
+    app.get("/users/coin/:email", async (req, res) => {
+      const user = req.params.email;
+      const filter = { email: user };
+      const options = {
+        projection: {
+          _id: 0,
+          coin: 1,
+        },
+      };
+
+      const result = await userCollection.findOne(filter, options);
+      res.send({ coin: result.coin });
+    });
+
+    // for Withdrawal Collection API
+    app.post("/withdrawals", async (req, res) => {
+      const data = req.body;
+      const result = await withdrawalCollection.insertOne(data);
+      res.send(result);
+    });
+
+    app.get("/withdrawals/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { worker_email: email };
+      const result = await withdrawalCollection.find(query).toArray();
+
+      res.send(result);
+    });
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
