@@ -58,6 +58,22 @@ async function run() {
       res.send(toper);
     });
 
+    // Get Worker Info
+    app.get("/worker", async (req, res) => {
+      const worker = await userCollection.aggregate([{ $match: { role: "Worker" } }]).toArray();
+
+      res.send(worker);
+    });
+
+    // Delete Worker
+    app.delete("/worker/:id", async (req, res) => {
+      const user = req.params.id;
+      const query = { _id: new ObjectId(user) };
+      const result = await userCollection.deleteOne(query);
+
+      res.send(result);
+    });
+
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
