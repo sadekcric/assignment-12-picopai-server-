@@ -74,6 +74,23 @@ async function run() {
       res.send(result);
     });
 
+    // User Role Update
+    app.patch("/role/:email", async (req, res) => {
+      const role = req.body.role;
+      const email = req.params.email;
+      const query = { email: email };
+
+      const option = {
+        $set: {
+          role: role,
+        },
+      };
+
+      const result = await userCollection.updateOne(query, option);
+
+      res.send(result);
+    });
+
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
