@@ -1,8 +1,10 @@
 const express = require("express");
+
 const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
+const stripe = require("stripe")(process.env.STRIPE_API_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // MIDDLEWARE
@@ -26,6 +28,7 @@ async function run() {
     const TaskCollection = client.db("picopai").collection("allTasks");
     const submitCollection = client.db("picopai").collection("allSubmits");
     const withdrawalCollection = client.db("picopai").collection("allWithdrawals");
+    const paymentCollection = client.db("picopai").collection("allPayments");
 
     // For User Collection APi
     app.post("/users", async (req, res) => {
@@ -39,6 +42,20 @@ async function run() {
 
       const result = await userCollection.insertOne(user);
       res.send(result);
+    });
+
+    // top 6 earned user
+    app.get("/toper", async (req, res) => {
+      const toper = await userCollection
+        .aggregate([
+          { $match: { role: "Worker" } },
+          { $sort: { coin: -1 } },
+          { $limit: 6 },
+          { $project: { photo: 1, coin: 1, email: 1, name: 1 } },
+        ])
+        .toArray();
+
+      res.send(toper);
     });
 
     app.get("/users/:email", async (req, res) => {
@@ -159,6 +176,59 @@ async function run() {
       const email = req.params.email;
       const query = { worker_email: email };
       const result = await withdrawalCollection.find(query).toArray();
+
+      res.send(result);
+    });
+
+    // Payment Related API
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      console.log(price);
+      const amount = parseInt(price * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payment", async (req, res) => {
+      const payment = req.body;
+      const pay = parseInt(payment.price);
+      let bayCoin = 0;
+      if (pay === 1) {
+        bayCoin = 10;
+      }
+
+      if (pay === 9) {
+        bayCoin = 100;
+      }
+
+      if (pay === 19) {
+        bayCoin = 500;
+      }
+
+      if (pay === 39) {
+        bayCoin = 1000;
+      }
+      const email = payment.email;
+
+      await userCollection.updateOne({ email: email }, { $inc: { coin: bayCoin } });
+
+      const result = await paymentCollection.insertOne(payment);
+
+      res.send(result);
+    });
+
+    app.get("/payment/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await paymentCollection.find(query).toArray();
 
       res.send(result);
     });
