@@ -30,6 +30,24 @@ async function run() {
     const withdrawalCollection = client.db("picopai").collection("allWithdrawals");
     const paymentCollection = client.db("picopai").collection("allPayments");
 
+    //Total User + Total Coin + Total Payment
+    app.get("/total", async (req, res) => {
+      // Total User
+      const totalUser = await userCollection.estimatedDocumentCount();
+
+      // Total Coin
+      const TotalCoinGroup = await userCollection.aggregate([{ $group: { _id: null, totalCoin: { $sum: "$coin" } } }]).toArray();
+
+      const totalCoin = TotalCoinGroup[0].totalCoin;
+
+      // TotalPayment
+      const groupPayment = await paymentCollection.aggregate([{ $group: { _id: null, totalPayment: { $sum: "$price" } } }]).toArray();
+
+      const totalPayment = groupPayment[0].totalPayment;
+
+      res.send([{ totalUser, totalCoin, totalPayment }]);
+    });
+
     // For User Collection APi
     app.post("/users", async (req, res) => {
       const user = req.body;
