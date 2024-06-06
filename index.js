@@ -228,6 +228,27 @@ async function run() {
       res.send(result);
     });
 
+    app.put("/pay/:email", async (req, res) => {
+      const withdraw = parseInt(req.body.coin);
+      const email = req.params.email;
+      const query = { email: email };
+      const update = {
+        $inc: { coin: -withdraw },
+      };
+      await userCollection.updateOne(query, update);
+
+      const filter = { worker_email: email };
+      const updateStatus = {
+        $set: {
+          withdrawal_status: "success",
+        },
+      };
+
+      const status = await withdrawalCollection.updateOne(filter, updateStatus);
+
+      res.send(status);
+    });
+
     app.get("/withdrawals/:email", async (req, res) => {
       const email = req.params.email;
       const query = { worker_email: email };
