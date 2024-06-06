@@ -249,6 +249,17 @@ async function run() {
       res.send(status);
     });
 
+    app.delete("/withdraw/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        worker_email: email,
+      };
+
+      const result = await withdrawalCollection.deleteOne(query);
+
+      res.send(result);
+    });
+
     app.get("/withdrawals/:email", async (req, res) => {
       const email = req.params.email;
       const query = { worker_email: email };
