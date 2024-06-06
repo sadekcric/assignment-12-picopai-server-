@@ -30,7 +30,7 @@ async function run() {
     const withdrawalCollection = client.db("picopai").collection("allWithdrawals");
     const paymentCollection = client.db("picopai").collection("allPayments");
 
-    //Total User + Total Coin + Total Payment
+    //For Admin Home: Total User + Total Coin + Total Payment
     app.get("/total", async (req, res) => {
       // Total User
       const totalUser = await userCollection.estimatedDocumentCount();
@@ -48,8 +48,8 @@ async function run() {
       res.send({ totalUser, totalCoin, totalPayment });
     });
 
-    // Available Coin + Total submission + Total Earning
-    app.get("/totalWorker/:email", async (req, res) => {
+    // For Worker Home: Available Coin + Total submission + Total Earning
+    app.get("/workerState/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       //
@@ -69,6 +69,34 @@ async function run() {
       const totalEarning = totalEarningResult.length > 0 ? totalEarningResult[0].totalEarning : 0;
 
       res.send({ availableCoin, submission, totalEarning });
+    });
+
+    // For TaskCreator Home: Available Coin + Pending Task + Payment Paid by Admin.
+    app.get("/task-creator-state/:email", async (req, res) => {
+      // for Available Coin
+      const email = req.params.email;
+      const query = { email: email };
+      const availableCoinResult = await userCollection.findOne(query);
+      const availableCoin = availableCoinResult.coin;
+
+      // Pending Task
+      const queryTask = { email: email };
+      const pendingTaskResult = await TaskCollection.aggregate([
+        { $match: queryTask },
+        { $group: { _id: null, pendingTask: { $sum: "$quantity" } } },
+      ]).toArray();
+
+      const pendingTask = pendingTaskResult.length > 0 ? pendingTaskResult[0].pendingTask : 0;
+
+      // Total Payment paid by User
+      const queryPayment = { email: email };
+      const totalPaidResult = await paymentCollection
+        .aggregate([{ $match: queryPayment }, { $group: { _id: null, totalPayment: { $sum: "$price" } } }])
+        .toArray();
+
+      const totalPaid = totalPaidResult.length > 0 ? totalPaidResult[0].totalPayment : 0;
+
+      res.send({ availableCoin, pendingTask, totalPaid });
     });
 
     // For User Collection APi
@@ -213,6 +241,8 @@ async function run() {
     // for Submit Collection API
     app.post("/submits", async (req, res) => {
       const data = req.body;
+      const queryByTitle = { email: data.creator_email, title: data.title };
+      await TaskCollection.updateOne(queryByTitle, { $inc: { quantity: -1 } });
       const result = await submitCollection.insertOne(data);
       res.send(result);
     });
