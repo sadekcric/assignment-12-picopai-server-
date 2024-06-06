@@ -247,6 +247,14 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/submit/:creator_email", async (req, res) => {
+      const email = req.params.creator_email;
+      const query = { creator_email: email };
+      const result = await submitCollection.find(query).toArray();
+
+      res.send(result);
+    });
+
     app.get("/submits/:worker_email", async (req, res) => {
       const email = req.params.worker_email;
       const query = { worker_email: email };
