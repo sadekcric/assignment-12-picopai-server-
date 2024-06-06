@@ -48,6 +48,29 @@ async function run() {
       res.send({ totalUser, totalCoin, totalPayment });
     });
 
+    // Available Coin + Total submission + Total Earning
+    app.get("/totalWorker/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      //
+      // AvailableCoin
+      const worker = await userCollection.findOne(query);
+      const availableCoin = worker.coin;
+
+      // TotalSubmission
+      const submissionQuery = { worker_email: email };
+      const submission = await submitCollection.estimatedDocumentCount(submissionQuery);
+
+      // Total Earning
+      const totalEarningQuery = { worker_email: email, status: "approved" };
+      const totalEarningResult = await submitCollection
+        .aggregate([{ $match: totalEarningQuery }, { $group: { _id: null, totalEarning: { $sum: "$payable" } } }])
+        .toArray();
+      const totalEarning = totalEarningResult.length > 0 ? totalEarningResult[0].totalEarning : 0;
+
+      res.send({ availableCoin, submission, totalEarning });
+    });
+
     // For User Collection APi
     app.post("/users", async (req, res) => {
       const user = req.body;
