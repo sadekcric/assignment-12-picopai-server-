@@ -45,7 +45,7 @@ async function run() {
 
       const totalPayment = groupPayment[0].totalPayment;
 
-      res.send([{ totalUser, totalCoin, totalPayment }]);
+      res.send({ totalUser, totalCoin, totalPayment });
     });
 
     // For User Collection APi
@@ -220,6 +220,11 @@ async function run() {
     app.post("/withdrawals", async (req, res) => {
       const data = req.body;
       const result = await withdrawalCollection.insertOne(data);
+      res.send(result);
+    });
+
+    app.get("/withdrawals", async (req, res) => {
+      const result = await withdrawalCollection.find().toArray();
       res.send(result);
     });
 
