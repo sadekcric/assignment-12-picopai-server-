@@ -29,6 +29,7 @@ async function run() {
     const submitCollection = client.db("picopai").collection("allSubmits");
     const withdrawalCollection = client.db("picopai").collection("allWithdrawals");
     const paymentCollection = client.db("picopai").collection("allPayments");
+    const notificationCollection = client.db("picopai").collection("notifications");
 
     //For Admin Home: Total User + Total Coin + Total Payment
     app.get("/total", async (req, res) => {
@@ -241,6 +242,21 @@ async function run() {
     app.post("/submits", async (req, res) => {
       const data = req.body;
       const queryByTitle = { email: data.creator_email, title: data.title };
+
+      // notification API Implementation
+      const worker = data.worker_name;
+      const email = data.creator_email;
+      const title = data.title;
+      const info = {
+        message: `${worker} has Submitted Your "${title}" Task`,
+        email: email,
+        date: new Date(),
+        status: "unread",
+      };
+
+      await notificationCollection.insertOne(info);
+      // ================================================
+
       await TaskCollection.updateOne(queryByTitle, { $inc: { quantity: -1 } });
       const result = await submitCollection.insertOne(data);
       res.send(result);
@@ -267,7 +283,17 @@ async function run() {
       const receiver = req.body.worker_email;
       const payable = parseInt(req.body.payable);
       const filterWorker = { email: receiver };
+      const title = req.body.title;
       await userCollection.updateOne(filterWorker, { $inc: { coin: payable } });
+
+      // Notification Implement
+      const info = {
+        email: receiver,
+        message: `Your "${title}" Task has Approved!`,
+        status: "unread",
+        date: new Date(),
+      };
+      await notificationCollection.insertOne(info);
 
       // for Status Change Api
       const result = await submitCollection.updateOne(query, updateDoc);
@@ -275,7 +301,7 @@ async function run() {
       res.send(result);
     });
 
-    // When TaskCreator will click the reject Button , Status Will be Changed by "Rejected",
+    // When TaskCreator will click the reject Button , Status Will be Changed by "Rejected", and notifications Your ${task} has rejected.
     app.patch("/reject/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -284,8 +310,23 @@ async function run() {
         $set: { status: status },
       };
 
+      // Notification Implementation.
+      const worker = await submitCollection.findOne(filter);
+      const workerEmail = worker.worker_email;
+      const title = worker.title;
+
+      const info = {
+        date: new Date(),
+        message: `Your "${title}" Task has Rejected!`,
+        status: "unread",
+        email: workerEmail,
+      };
+
+      await notificationCollection.insertOne(info);
+
+      // Rejection Implementation.
       const result = await submitCollection.updateOne(filter, updateDoc);
-      console.log(result);
+
       res.send(result);
     });
 
@@ -314,6 +355,19 @@ async function run() {
     // for Withdrawal Collection API
     app.post("/withdrawals", async (req, res) => {
       const data = req.body;
+
+      // Notification implement
+      const info = {
+        email: "Admin",
+        status: "unread",
+        date: new Date(),
+        message: `${data.worker_name} send a $${data.withdrawal_dollar} withdrawal Request.`,
+      };
+
+      await notificationCollection.insertOne(info);
+
+      // ==============================================
+
       const result = await withdrawalCollection.insertOne(data);
       res.send(result);
     });
@@ -338,6 +392,18 @@ async function run() {
           withdrawal_status: "success",
         },
       };
+
+      // Notification Implement
+      const info = {
+        email: email,
+        message: `Your Withdraw has Done. Please Check Your Balance.`,
+        date: new Date(),
+        status: "unread",
+      };
+
+      await notificationCollection.insertOne(info);
+
+      // =====================================
 
       const status = await withdrawalCollection.updateOne(filter, updateStatus);
 
