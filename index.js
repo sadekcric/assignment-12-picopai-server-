@@ -275,6 +275,20 @@ async function run() {
       res.send(result);
     });
 
+    // When TaskCreator will click the reject Button , Status Will be Changed by "Rejected",
+    app.patch("/reject/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const status = req.body.status;
+      const updateDoc = {
+        $set: { status: status },
+      };
+
+      const result = await submitCollection.updateOne(filter, updateDoc);
+      console.log(result);
+      res.send(result);
+    });
+
     app.get("/submits/:worker_email", async (req, res) => {
       const email = req.params.worker_email;
       const query = { worker_email: email };
