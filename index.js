@@ -208,7 +208,6 @@ async function run() {
       const id = req.params.id;
       const tasks = req.body;
       const query = { _id: new ObjectId(id) };
-      const options = { upsert: true };
       const update = {
         $set: {
           details: tasks.details,
@@ -251,6 +250,27 @@ async function run() {
       const email = req.params.creator_email;
       const query = { creator_email: email };
       const result = await submitCollection.find(query).toArray();
+
+      res.send(result);
+    });
+
+    // when TaskCreator Clicking the Approve Button, status will be "Approve"
+    app.put("/approve/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const status = req.body.status;
+      const updateDoc = {
+        $set: { status: status },
+      };
+
+      // Coin Received by Worker API
+      const receiver = req.body.worker_email;
+      const payable = parseInt(req.body.payable);
+      const filterWorker = { email: receiver };
+      await userCollection.updateOne(filterWorker, { $inc: { coin: payable } });
+
+      // for Status Change Api
+      const result = await submitCollection.updateOne(query, updateDoc);
 
       res.send(result);
     });
