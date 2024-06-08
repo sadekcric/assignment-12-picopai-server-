@@ -482,6 +482,46 @@ async function run() {
       res.send(result);
     });
 
+    // Notification Related API
+    app.get("/notification/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+
+      const result = await notificationCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/notification", async (req, res) => {
+      const query = { email: "Admin" };
+      const result = await notificationCollection.find(query).toArray();
+
+      res.send(result);
+    });
+
+    app.patch("/notification/status/:email", async (req, res) => {
+      const email = req.params.email;
+      const status = req.body.status;
+      const query = { email: email };
+      const updateDoc = {
+        $set: { status },
+      };
+
+      const findAdmin = await notificationCollection.findOne(query);
+
+      if (!findAdmin) {
+        const query = { email: "Admin" };
+        const result = await notificationCollection.updateMany(query, updateDoc);
+
+        return res.send(result);
+      }
+
+      const result = await notificationCollection.updateMany(query, updateDoc);
+
+      res.send(result);
+    });
+
+    // ================================================================
+
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
   }
