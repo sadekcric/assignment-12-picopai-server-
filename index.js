@@ -4,6 +4,7 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
+var jwt = require("jsonwebtoken");
 const stripe = require("stripe")(process.env.STRIPE_API_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
@@ -31,6 +32,33 @@ async function run() {
     const paymentCollection = client.db("picopai").collection("allPayments");
     const notificationCollection = client.db("picopai").collection("notifications");
 
+    // JWT ==========================================
+    // JWT Implementation,
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_SECRET_KEY, { expiresIn: "1d" });
+
+      res.send({ token });
+    });
+
+    // middleWare
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+
+      const token = req.headers.authorization.split(" ")[1];
+
+      jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: "unauthorized access" });
+        }
+        req.decoded = decoded;
+        next();
+      });
+    };
+    // =============================================
+
     //For Admin Home: Total User + Total Coin + Total Payment
     app.get("/total", async (req, res) => {
       // Total User
@@ -49,8 +77,11 @@ async function run() {
       res.send({ totalUser, totalCoin, totalPayment });
     });
 
-    // For Worker Home: Available Coin + Total submission + Total Earning
-    app.get("/workerState/:email", async (req, res) => {
+    // For Worker Home: Available Coin + Total submission + Total Earning + Verified By JWT
+    app.get("/workerState/:email", verifyToken, async (req, res) => {
+      if (req.decoded.email !== req.params.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const email = req.params.email;
       const query = { email: email };
       //
@@ -73,7 +104,10 @@ async function run() {
     });
 
     // For TaskCreator Home: Available Coin + Pending Task + Payment Paid by Admin.
-    app.get("/task-creator-state/:email", async (req, res) => {
+    app.get("/task-creator-state/:email", verifyToken, async (req, res) => {
+      if (req.decoded.email !== req.params.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       // for Available Coin
       const email = req.params.email;
       const query = { email: email };
@@ -136,7 +170,7 @@ async function run() {
     });
 
     // Delete Worker
-    app.delete("/worker/:id", async (req, res) => {
+    app.delete("/worker/:id", verifyToken, async (req, res) => {
       const user = req.params.id;
       const query = { _id: new ObjectId(user) };
       const result = await userCollection.deleteOne(query);
@@ -145,7 +179,10 @@ async function run() {
     });
 
     // User Role Update
-    app.patch("/role/:email", async (req, res) => {
+    app.patch("/role/:email", verifyToken, async (req, res) => {
+      if (req.decoded.email !== req.params.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const role = req.body.role;
       const email = req.params.email;
       const query = { email: email };
@@ -171,7 +208,10 @@ async function run() {
     });
 
     // for Task Collection Api
-    app.post("/add-task", async (req, res) => {
+    app.post("/add-task", verifyToken, async (req, res) => {
+      if (req.decoded.email !== req.body.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const tasks = req.body;
       const query = { email: tasks.email };
       const payableCoin = parseInt(tasks.payable);
@@ -198,7 +238,10 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/get_task/:email", async (req, res) => {
+    app.get("/get_task/:email", verifyToken, async (req, res) => {
+      if (req.decoded.email !== req.params.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const email = req.params.email;
       const query = { email: email };
       const result = await TaskCollection.find(query).toArray();
@@ -262,7 +305,10 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/submit/:creator_email", async (req, res) => {
+    app.get("/submit/:creator_email", verifyToken, async (req, res) => {
+      if (req.decoded.email !== req.params.creator_email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const email = req.params.creator_email;
       const query = { creator_email: email };
       const result = await submitCollection.find(query).toArray();
@@ -330,7 +376,11 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/submits/:worker_email", async (req, res) => {
+    app.get("/submits/:worker_email", verifyToken, async (req, res) => {
+      if (req.decoded.email !== req.params.worker_email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
       const email = req.params.worker_email;
       const query = { worker_email: email };
       const result = await submitCollection.find(query).toArray();
@@ -353,7 +403,10 @@ async function run() {
     });
 
     // for Withdrawal Collection API
-    app.post("/withdrawals", async (req, res) => {
+    app.post("/withdrawals", verifyToken, async (req, res) => {
+      if (req.decoded.email !== req.body.worker_email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const data = req.body;
 
       // Notification implement
@@ -377,7 +430,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/pay/:email", async (req, res) => {
+    app.put("/pay/:email", verifyToken, async (req, res) => {
       const withdraw = parseInt(req.body.coin);
       const email = req.params.email;
       const query = { email: email };
