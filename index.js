@@ -155,7 +155,7 @@ async function run() {
           { $match: { role: "Worker" } },
           { $sort: { coin: -1 } },
           { $limit: 6 },
-          { $project: { photo: 1, coin: 1, email: 1, name: 1 } },
+          { $project: { photo: 1, coin: 1, email: 1, name: 1, completionTask: 1 } },
         ])
         .toArray();
 
@@ -330,7 +330,7 @@ async function run() {
       const payable = parseInt(req.body.payable);
       const filterWorker = { email: receiver };
       const title = req.body.title;
-      await userCollection.updateOne(filterWorker, { $inc: { coin: payable } });
+      await userCollection.updateOne(filterWorker, { $inc: { coin: payable, completionTask: 1 } });
 
       // Notification Implement
       const info = {
